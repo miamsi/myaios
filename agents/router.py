@@ -34,8 +34,13 @@ class RouterAgent:
                 messages.append(ToolMessage(content=self.tool_map[call["name"]].invoke(call["args"]), tool_call_id=call["id"]))
             return self.stream_llm.stream(messages)
             
-        if self.tavily and ("search" in query.lower() or "current" in query.lower()):
+        # Pemicu pencarian web yang lebih pintar dan sensitif
+        trigger_words = ["search", "current", "hari ini", "sekarang", "berita", "saham", "cuaca", "terbaru"]
+        need_search = any(word in query.lower() for word in trigger_words)
+            
+        if self.tavily and need_search:
             search_res = self.tavily.search(query=query, search_depth="basic", max_results=3)
-            messages[0]["content"] += f"\n\n### WEB SEARCH\n" + "\n".join([f"[{r['url']}] {r['content']}" for r in search_res['results']])
+            web_ctx = "\n".join([f"[{r['url']}] {r['content']}" for r in search_res['results']])
+            messages[0]["content"] += f"\n\n### WEB SEARCH\n{web_ctx}"
             
         return self.stream_llm.stream(messages)
