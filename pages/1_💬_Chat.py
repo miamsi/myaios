@@ -13,7 +13,17 @@ if "user_id" not in st.session_state:
     st.stop()
     
 st.title("Interface")
+st.title("Interface")
 
+# === POTONGAN KODE DIAGNOSTIK (Hapus jika sudah normal) ===
+import os
+st.sidebar.subheader("🔍 API Key Diagnostics")
+groq_env = os.environ.get("GROQ_API_KEY")
+groq_sec = st.secrets.get("GROQ_API_KEY")
+
+st.sidebar.write("Groq via System Env:", "✅ Terdeteksi" if groq_env else "❌ Kosong")
+st.sidebar.write("Groq via St Secrets:", "✅ Terdeteksi" if groq_sec else "❌ Kosong")
+# ==========================================================
 # 2. Manajemen Sidebar & Sesi Chat
 st.sidebar.title("Chats")
 if st.sidebar.button("➕ New Chat"):
