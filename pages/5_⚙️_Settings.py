@@ -1,6 +1,11 @@
 import streamlit as st
 from services.supabase_client import db
 
+if "user_id" not in st.session_state:
+    st.warning("Secure session missing. Redirecting to main login...")
+    st.switch_page("app.py")
+    st.stop()
+
 st.title("System Settings & Profile")
 
 res = db.table("user_profiles").select("*").eq("user_id", st.session_state.user_id).execute()
