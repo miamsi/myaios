@@ -37,6 +37,10 @@ class RouterAgent:
         # 2. Hancurkan asumsi tool-call bawaan Llama dengan menyatukan teks ke satu prompt statis.
         # Strategi ini mengubah format objek chat biasa menjadi satu kesatuan dokumen instruksi agar Groq bertindak sebagai Penulis/Asisten murni.
         
+        # Import wrapper pesan resmi milik LangChain di bagian paling atas fungsi/file jika belum ada
+        from langchain_core.messages import SystemMessage, HumanMessage
+
+        # 2. Hancurkan asumsi tool-call bawaan Llama dengan menyatukan teks ke satu prompt statis.
         system_instruction = (
             "You are a helpful, private AI Operating System assistant. "
             "You MUST reply to the user directly in natural language text. "
@@ -44,13 +48,11 @@ class RouterAgent:
             "Your tool-calling engine is strictly disabled. Treat everything as a pure reading and text-generation task."
         )
 
-        # Bangun teks percakapan historis agar konteks tetap terjaga
         conversation_history = ""
-        for msg in history[-4:]: # Ambil 4 pesan terakhir agar ingatan tetap segar tapi hemat token
+        for msg in history[-4:]:
             role = "User" if msg["role"] == "user" else "Assistant"
             conversation_history += f"{role}: {msg['content']}\n"
 
-        # Gabungkan seluruh data menjadi satu muatan pesan tunggal (User Role)
         final_payload = (
             f"CONTEXT AND GROUND TRUTH DATA:\n"
             f"[Long-term Memory]: {mem_ctx}\n"
@@ -62,10 +64,10 @@ class RouterAgent:
             f"Answer in Indonesian, matching the user's casual tone, and output ONLY the text response."
         )
 
-        # Kirim ke Groq dengan format dua arah yang sangat kaku agar dia tidak punya ruang untuk berhalusinasi
+        # BUNGKUS DENGAN OBJEK RESMI LANGCHAIN (Ini kuncinya agar tidak terbaca sebagai Tuple!)
         formatted_messages = [
-            {"role": "system", "content": system_instruction},
-            {"role": "user", "content": final_payload}
+            SystemMessage(content=system_instruction),
+            HumanMessage(content=final_payload)
         ]
 
         # 3. Eksekusi
