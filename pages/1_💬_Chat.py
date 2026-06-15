@@ -5,6 +5,11 @@ from agents.knowledge import KnowledgeAgent
 from services.supabase_client import db
 from services.compression import compress_session_history
 
+if "user_id" not in st.session_state:
+    st.warning("Secure session missing. Redirecting to main login...")
+    st.switch_page("app.py")
+    st.stop()
+    
 st.title("Interface")
 
 st.sidebar.title("Chats")
