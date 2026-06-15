@@ -2,6 +2,11 @@ import streamlit as st
 from agents.knowledge import KnowledgeAgent
 from services.supabase_client import db
 
+if "user_id" not in st.session_state:
+    st.warning("Secure session missing. Redirecting to main login...")
+    st.switch_page("app.py")
+    st.stop()
+
 st.title("Knowledge Base")
 agent = KnowledgeAgent(st.session_state.user_id)
 
