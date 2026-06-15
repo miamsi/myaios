@@ -34,13 +34,34 @@ class RouterAgent:
                 messages.append(ToolMessage(content=self.tool_map[call["name"]].invoke(call["args"]), tool_call_id=call["id"]))
             return self.stream_llm.stream(messages)
             
-        # Pemicu pencarian web yang lebih pintar dan sensitif
-        trigger_words = ["search", "current", "hari ini", "sekarang", "berita", "saham", "cuaca", "terbaru"]
+        # 1. Jalankan Deteksi Kata Kunci Tavily seperti sebelumnya
+        trigger_words = ["search", "current", "hari ini", "sekarang", "berita", "saham", "cuaca", "terbaru", "berapa harga"]
         need_search = any(word in query.lower() for word in trigger_words)
             
         if self.tavily and need_search:
-            search_res = self.tavily.search(query=query, search_depth="basic", max_results=3)
-            web_ctx = "\n".join([f"[{r['url']}] {r['content']}" for r in search_res['results']])
-            messages[0]["content"] += f"\n\n### WEB SEARCH\n{web_ctx}"
+            try:
+                search_res = self.tavily.search(query=query, search_depth="basic", max_results=3)
+                web_ctx = "\n".join([f"- {r['title']}: {r['content']} (Source: {r['url']})" for r in search_res['results']])
+            except Exception:
+                web_ctx = "Gagal mengambil data dari internet."
+        else:
+            web_ctx = "Tidak ada data internet terbaru."
+
+        # 2. Susun pesan yang bersih untuk Groq (Taruh konteks di akhir agar dibaca maksimal)
+        formatted_messages = []
+        
+        # Masukkan seluruh riwayat chat sebelumnya
+        for msg in history:
+            formatted_messages.append(msg)
             
-        return self.stream_llm.stream(messages)
+        # Buat System/User Hint terakhir agar Groq TIDAK memanggil tool internal
+        final_prompt = f"USER QUERY: {query}\n\n"
+        final_prompt += f"### LIVE WEB CONTEXT (Gunakan data ini untuk menjawab, JANGAN memanggil fungsi/tool search eksternal lagi):\n{web_ctx}\n\n"
+        final_prompt += "Silakan jawab pertanyaan user langsung dalam bentuk teks biasa berdasarkan konteks di atas."
+        
+        # Masukkan prompt akhir ini sebagai pesan User terakhir
+        formatted_messages.append({"role": "user", "content": final_prompt})
+
+        # 3. Panggil LLM dengan struktur pesan yang baru
+        response = self.llm.invoke(formatted_messages)
+        return response
